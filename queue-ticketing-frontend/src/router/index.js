@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router';
+import { isLoggedIn } from '../utils/auth';
 
 const routes = [
   {
@@ -8,27 +9,27 @@ const routes = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('../views/Login.vue')
+    component: () => import('../views/login/Login.vue')
   },
   {
     path: '/console',
     name: 'CallConsole',
-    component: () => import('../views/CallConsole.vue')
+    component: () => import('../views/console/CallConsole.vue')
   },
   {
     path: '/config',
     name: 'StoreConfig',
-    component: () => import('../views/StoreConfig.vue')
+    component: () => import('../views/config/StoreConfig.vue')
   },
   {
     path: '/simulator',
     name: 'TakeTicketSimulator',
-    component: () => import('../views/TakeTicketSimulator.vue')
+    component: () => import('../views/simulator/TakeTicketSimulator.vue')
   },
   {
     path: '/h5',
     name: 'ClientTake',
-    component: () => import('../views/ClientTake.vue')
+    component: () => import('../views/h5/ClientTake.vue')
   }
 ];
 
@@ -41,7 +42,7 @@ router.beforeEach((to) => {
   if (to.path === '/h5' || to.path === '/login') {
     return true;
   }
-  if (!localStorage.getItem('token')) {
+  if (!isLoggedIn()) {
     return { path: '/login' };
   }
   return true;

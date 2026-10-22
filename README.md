@@ -55,26 +55,41 @@ queue-ticketing/
 ├── queue-ticketing-backend/
 │   ├── sql/init.sql                 # 建表 + 演示数据
 │   └── src/main/java/com/queue/ticketing/
-│       ├── common/                  # 响应、异常、常量、锁、幂等、JWT
+│       ├── common/
+│       │   ├── result/              # Result、PageResult
+│       │   ├── exception/           # BizException、ErrorCodeEnum、全局异常
+│       │   ├── constant/            # 常量
+│       │   ├── entity/              # BaseEntity
+│       │   ├── annotation/          # Idempotent、RequireAuth
+│       │   ├── idempotent/          # 幂等切面
+│       │   ├── event/               # 领域事件
+│       │   ├── util/                # 分布式锁、JWT
+│       │   └── web/                 # 响应 advice、登录拦截器
 │       ├── config/                  # Redis、Redisson、线程池、CORS、TraceId
-│       ├── modules/
-│       │   ├── auth/                # 员工账号、登录上下文
-│       │   ├── store/               # 商户、门店、柜台
-│       │   ├── queue/               # 队列模板、实例、规则、定时任务
-│       │   ├── ticket/              # 取号单、状态机、号码生成
-│       │   └── notify/              # 通知渠道、通知日志、事件监听
-│       └── interfaces/              # Controller、拦截器、异常处理
+│       └── modules/
+│           ├── auth/                # controller/service/mapper/entity/dto/context
+│           ├── store/               # controller/service/mapper/entity/dto/converter
+│           ├── queue/               # controller/service/mapper/entity/dto/enums/converter/job
+│           ├── ticket/              # controller/service/mapper/entity/dto/vo/enums/event/converter/job
+│           └── notify/              # channel/listener/service/mapper/entity
 └── queue-ticketing-frontend/
     └── src/
-        ├── api/                     # axios 封装
+        ├── api/                     # request + auth/store/queue/ticket 分模块
         ├── router/                  # 路由
+        ├── utils/                   # auth token 管理
         └── views/
-            ├── Login.vue            # 商户登录
-            ├── StoreConfig.vue      # 门店与队列配置
-            ├── TakeTicketSimulator.vue # 取号模拟
-            ├── CallConsole.vue      # 叫号控制台
-            └── ClientTake.vue       # C 端 H5 取号页
+            ├── login/Login.vue
+            ├── console/CallConsole.vue
+            ├── config/StoreConfig.vue
+            ├── simulator/TakeTicketSimulator.vue
+            └── h5/ClientTake.vue
 ```
+
+### 分包原则
+
+- `modules/{domain}` 自包含 Controller、Service、Mapper、Entity、DTO、VO，新增业务只在自己的领域包内扩展。
+- `common` 只放跨领域能力，不依赖任何 `modules`。
+- `config` 只放框架配置，不放业务逻辑。
 
 ## 核心流程
 
@@ -136,7 +151,17 @@ mysql -uroot -p < queue-ticketing-backend/sql/init.sql
 - 今日队列实例：ID 1 / 2
 - 员工账号：`admin` / `123456`
 
-### 3. 启动后端
+### 3. 配置本地连接
+
+```bash
+cd queue-ticketing-backend/src/main/resources
+cp application-dev.example.yml application-dev.yml
+# 修改 application-dev.yml 中的数据库密码，或设置环境变量 DB_PASSWORD
+```
+
+`application-dev.yml` 已被 `.gitignore` 排除，不会提交到仓库。
+
+### 4. 启动后端
 
 ```bash
 cd queue-ticketing-backend
@@ -146,7 +171,7 @@ mvn spring-boot:run
 - 服务地址：`http://localhost:8080`
 - 接口文档：`http://localhost:8080/swagger-ui/index.html`
 
-### 4. 启动前端
+### 5. 启动前端
 
 ```bash
 cd queue-ticketing-frontend

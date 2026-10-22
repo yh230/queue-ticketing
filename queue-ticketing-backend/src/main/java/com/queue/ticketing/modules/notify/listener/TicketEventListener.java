@@ -1,6 +1,6 @@
 package com.queue.ticketing.modules.notify.listener;
 
-import com.queue.ticketing.common.QueueConstants;
+import com.queue.ticketing.common.constant.QueueConstants;
 import com.queue.ticketing.modules.notify.service.NotifyService;
 import com.queue.ticketing.modules.ticket.entity.Ticket;
 import com.queue.ticketing.modules.ticket.event.TicketCalledEvent;

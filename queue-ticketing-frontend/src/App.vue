@@ -21,15 +21,16 @@
 <script setup>
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+import { isLoggedIn, removeToken } from './utils/auth';
 
 const route = useRoute();
 const router = useRouter();
 
 const showNav = computed(() => route.path !== '/h5' && route.path !== '/login');
-const loggedIn = computed(() => Boolean(localStorage.getItem('token')));
+const loggedIn = computed(() => isLoggedIn());
 
 const logout = () => {
-  localStorage.removeItem('token');
+  removeToken();
   router.push('/login');
 };
 </script>

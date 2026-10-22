@@ -20,6 +20,7 @@ yarn-error.log*
 .DS_Store
 Thumbs.db
 
-# Local config
+# Local config (contains credentials)
+application-dev.yml
 application-local.yml
 *.local.yml

@@ -1,9 +1,9 @@
 package com.queue.ticketing.modules.ticket.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.queue.ticketing.common.BizException;
-import com.queue.ticketing.common.ErrorCodeEnum;
-import com.queue.ticketing.common.QueueConstants;
+import com.queue.ticketing.common.exception.BizException;
+import com.queue.ticketing.common.exception.ErrorCodeEnum;
+import com.queue.ticketing.common.constant.QueueConstants;
 import com.queue.ticketing.common.event.DomainEventPublisher;
 import com.queue.ticketing.common.util.DistributedLockUtil;
 import com.queue.ticketing.modules.queue.dto.QueueRule;

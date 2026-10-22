@@ -1,8 +1,8 @@
 package com.queue.ticketing.common.idempotent;
 
-import com.queue.ticketing.common.BizException;
-import com.queue.ticketing.common.ErrorCodeEnum;
-import com.queue.ticketing.common.QueueConstants;
+import com.queue.ticketing.common.exception.BizException;
+import com.queue.ticketing.common.exception.ErrorCodeEnum;
+import com.queue.ticketing.common.constant.QueueConstants;
 import com.queue.ticketing.common.annotation.Idempotent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

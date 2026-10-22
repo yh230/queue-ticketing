@@ -1,6 +1,6 @@
 package com.queue.ticketing.config;
 
-import com.queue.ticketing.interfaces.interceptor.LoginInterceptor;
+import com.queue.ticketing.common.web.LoginInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;

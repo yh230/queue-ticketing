@@ -1,7 +1,7 @@
 package com.queue.ticketing.modules.queue.service;
 
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.queue.ticketing.common.QueueConstants;
+import com.queue.ticketing.common.constant.QueueConstants;
 import com.queue.ticketing.common.util.DistributedLockUtil;
 import com.queue.ticketing.modules.queue.entity.QueueInstance;
 import com.queue.ticketing.modules.queue.enums.QueueStatus;

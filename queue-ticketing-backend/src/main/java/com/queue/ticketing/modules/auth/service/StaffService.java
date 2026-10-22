@@ -2,8 +2,8 @@ package com.queue.ticketing.modules.auth.service;
 
 import cn.hutool.crypto.digest.DigestUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.queue.ticketing.common.BizException;
-import com.queue.ticketing.common.ErrorCodeEnum;
+import com.queue.ticketing.common.exception.BizException;
+import com.queue.ticketing.common.exception.ErrorCodeEnum;
 import com.queue.ticketing.common.util.JwtUtil;
 import com.queue.ticketing.modules.auth.dto.LoginUser;
 import com.queue.ticketing.modules.auth.entity.Staff;

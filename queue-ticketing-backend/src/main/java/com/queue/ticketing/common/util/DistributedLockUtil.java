@@ -1,7 +1,7 @@
 package com.queue.ticketing.common.util;
 
-import com.queue.ticketing.common.BizException;
-import com.queue.ticketing.common.ErrorCodeEnum;
+import com.queue.ticketing.common.exception.BizException;
+import com.queue.ticketing.common.exception.ErrorCodeEnum;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RLock;

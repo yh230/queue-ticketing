@@ -1,7 +1,7 @@
 package com.queue.ticketing.modules.ticket.entity;
 
 import com.baomidou.mybatisplus.annotation.TableName;
-import com.queue.ticketing.common.BaseEntity;
+import com.queue.ticketing.common.entity.BaseEntity;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
