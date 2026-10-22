@@ -86,7 +86,7 @@ const takeTicket = async () => {
   try {
     clientToken.value = await clientApi.login({ phone: form.phone });
 
-    const activeTicket = await ticketApi.getActive(form.storeId, form.templateId, clientToken.value);
+    const activeTicket = await ticketApi.getActive(clientToken.value);
     if (activeTicket) {
       ticket.value = activeTicket;
       ElMessage.warning('您已有进行中的排队号码');

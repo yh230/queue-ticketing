@@ -58,6 +58,18 @@ public interface TicketMapper extends BaseMapper<Ticket> {
     }
 
     /**
+     * 查询用户全局进行中的 ticket
+     *
+     * @param userId 用户ID
+     * @return ticket 列表
+     */
+    default List<Ticket> selectActiveByUserId(String userId) {
+        return selectList(new LambdaQueryWrapper<Ticket>()
+                .eq(Ticket::getUserId, userId)
+                .in(Ticket::getStatus, TicketStatus.WAITING.getCode(), TicketStatus.CALLED.getCode()));
+    }
+
+    /**
      * 乐观锁更新 ticket 状态
      *
      * @param id          ticket ID

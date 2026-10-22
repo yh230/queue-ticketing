@@ -115,8 +115,8 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             throw new BizException(ErrorCodeEnum.QUEUE_CLOSED);
         }
 
-        // 检查重复取号
-        List<Ticket> activeTickets = getBaseMapper().selectActiveByUser(instance.getId(), request.getUserId());
+        // 同一手机号全局只能有一个进行中的取号单
+        List<Ticket> activeTickets = getBaseMapper().selectActiveByUserId(request.getUserId());
         if (!activeTickets.isEmpty()) {
             throw new BizException(ErrorCodeEnum.TICKET_DUPLICATE);
         }
@@ -389,20 +389,18 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
     }
 
     /**
-     * 查询用户进行中的取号单
+     * 查询用户全局进行中的取号单
      *
-     * @param storeId    门店ID
-     * @param templateId 队列模板ID
-     * @param userId     用户ID
+     * @param userId 用户ID
      * @return 进行中的取号单，无则返回 null
      */
-    public TicketVO getActiveTicket(Long storeId, Long templateId, String userId) {
-        QueueInstance instance = queueInstanceService.getOrCreateInstance(storeId, templateId, LocalDate.now());
-        List<Ticket> activeTickets = getBaseMapper().selectActiveByUser(instance.getId(), userId);
+    public TicketVO getActiveTicket(String userId) {
+        List<Ticket> activeTickets = getBaseMapper().selectActiveByUserId(userId);
         if (activeTickets.isEmpty()) {
             return null;
         }
-        return buildTicketVO(activeTickets.get(0), instance.getId());
+        Ticket ticket = activeTickets.get(0);
+        return buildTicketVO(ticket, ticket.getQueueInstanceId());
     }
 
     /**

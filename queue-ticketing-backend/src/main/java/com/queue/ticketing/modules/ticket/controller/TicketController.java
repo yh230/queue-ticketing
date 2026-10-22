@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -63,17 +62,15 @@ public class TicketController {
     }
 
     /**
-     * C端：查询当前用户进行中的取号单
+     * C端：查询当前用户全局进行中的取号单
      *
-     * @param storeId    门店ID
-     * @param templateId 队列模板ID
      * @return 进行中的取号单，无则返回 null
      */
     @RequireAuth(allowClient = true)
     @GetMapping("/active")
-    public Result<TicketVO> getActiveTicket(@RequestParam Long storeId, @RequestParam Long templateId) {
+    public Result<TicketVO> getActiveTicket() {
         LoginUser loginUser = LoginContext.get();
-        return Result.success(ticketService.getActiveTicket(storeId, templateId, loginUser.getUserId()));
+        return Result.success(ticketService.getActiveTicket(loginUser.getUserId()));
     }
 
     /**
