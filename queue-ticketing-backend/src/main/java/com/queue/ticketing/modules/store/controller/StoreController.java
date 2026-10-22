@@ -60,4 +60,15 @@ public class StoreController {
         );
         return Result.success(list);
     }
+
+    /**
+     * 查询门店详情
+     *
+     * @param id 门店ID
+     * @return 门店信息
+     */
+    @GetMapping("/{id}")
+    public Result<Store> get(@PathVariable Long id) {
+        return Result.success(storeMapper.selectById(id));
+    }
 }

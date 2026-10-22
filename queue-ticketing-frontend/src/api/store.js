@@ -1,6 +1,9 @@
 import request from './request';
 
 export const storeApi = {
+  get(storeId) {
+    return request.get(`/stores/${storeId}`);
+  },
   listByMerchant(merchantId) {
     return request.get(`/stores/merchant/${merchantId}`);
   }
