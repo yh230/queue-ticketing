@@ -25,5 +25,12 @@ export const ticketApi = {
   },
   getQueueStatus(queueInstanceId) {
     return request.get(`/tickets/queue/${queueInstanceId}/status`);
+  },
+  getActive(storeId, templateId, token) {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    return request.get('/tickets/active', {
+      params: { storeId, templateId },
+      headers
+    });
   }
 };

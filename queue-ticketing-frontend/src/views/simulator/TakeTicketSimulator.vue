@@ -93,6 +93,15 @@ const takeTicket = async () => {
   loading.value = true;
   try {
     clientToken.value = await clientApi.login({ phone: form.phone });
+
+    const activeTicket = await ticketApi.getActive(form.storeId, form.templateId, clientToken.value);
+    if (activeTicket) {
+      ticket.value = activeTicket;
+      ElMessage.warning('您已有进行中的排队号码');
+      startPolling();
+      return;
+    }
+
     const idempotencyKey = `${form.phone}-${Date.now()}`;
     ticket.value = await ticketApi.take({
       storeId: form.storeId,

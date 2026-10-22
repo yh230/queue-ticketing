@@ -389,6 +389,23 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
     }
 
     /**
+     * 查询用户进行中的取号单
+     *
+     * @param storeId    门店ID
+     * @param templateId 队列模板ID
+     * @param userId     用户ID
+     * @return 进行中的取号单，无则返回 null
+     */
+    public TicketVO getActiveTicket(Long storeId, Long templateId, String userId) {
+        QueueInstance instance = queueInstanceService.getOrCreateInstance(storeId, templateId, LocalDate.now());
+        List<Ticket> activeTickets = getBaseMapper().selectActiveByUser(instance.getId(), userId);
+        if (activeTickets.isEmpty()) {
+            return null;
+        }
+        return buildTicketVO(activeTickets.get(0), instance.getId());
+    }
+
+    /**
      * 查询队列实时状态
      *
      * @param queueInstanceId 队列实例ID
