@@ -99,4 +99,16 @@ public interface TicketMapper extends BaseMapper<Ticket> {
             "AND status = 'WAITING' AND deleted = 0 ORDER BY updated_at ASC LIMIT #{limit}")
     List<Ticket> selectWaitingTicketsOrdered(@Param("queueInstanceId") Long queueInstanceId,
                                              @Param("limit") int limit);
+
+    /**
+     * 查询队列实例下最大的号码序号
+     *
+     * @param queueInstanceId 队列实例ID
+     * @param prefix          号码前缀
+     * @return 最大序号，无数据时返回 0
+     */
+    @Select("SELECT COALESCE(MAX(CAST(SUBSTRING(ticket_no, LENGTH(#{prefix}) + 1) AS UNSIGNED)), 0) " +
+            "FROM ticket WHERE queue_instance_id = #{queueInstanceId} AND deleted = 0")
+    Long selectMaxTicketSeq(@Param("queueInstanceId") Long queueInstanceId,
+                            @Param("prefix") String prefix);
 }

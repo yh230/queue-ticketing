@@ -1,8 +1,9 @@
 package com.queue.ticketing.modules.ticket.service;
 
+import com.queue.ticketing.common.constant.QueueConstants;
 import com.queue.ticketing.common.exception.BizException;
 import com.queue.ticketing.common.exception.ErrorCodeEnum;
-import com.queue.ticketing.common.constant.QueueConstants;
+import com.queue.ticketing.modules.ticket.mapper.TicketMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 排队号码生成器
@@ -23,8 +25,14 @@ import java.time.format.DateTimeFormatter;
 public class TicketNoGenerator {
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final TicketMapper ticketMapper;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
+
+    /**
+     * 序列 Key 保留时间（小时）
+     */
+    private static final long SEQ_KEY_TTL_HOURS = 48L;
 
     /**
      * 生成下一个排队号码
@@ -40,6 +48,17 @@ public class TicketNoGenerator {
             log.error("Redis 号码生成失败，queueInstanceId={}", queueInstanceId);
             throw new BizException(ErrorCodeEnum.TICKET_NO_GENERATE_FAILED);
         }
+
+        // 序列首次创建时用数据库最大号兜底，避免 Redis 重启后号码变小
+        if (seq == 1L) {
+            Long dbMaxSeq = ticketMapper.selectMaxTicketSeq(queueInstanceId, prefix);
+            if (dbMaxSeq != null && dbMaxSeq >= 1) {
+                seq = dbMaxSeq + 1;
+                redisTemplate.opsForValue().set(seqKey, seq);
+            }
+            redisTemplate.expire(seqKey, SEQ_KEY_TTL_HOURS, TimeUnit.HOURS);
+        }
+
         String ticketNo = prefix + String.format("%0" + QueueConstants.TICKET_NO_LENGTH + "d", seq);
         log.debug("生成号码，queueInstanceId={}，ticketNo={}", queueInstanceId, ticketNo);
         return ticketNo;
