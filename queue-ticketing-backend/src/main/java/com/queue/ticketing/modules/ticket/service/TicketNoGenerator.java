@@ -30,9 +30,9 @@ public class TicketNoGenerator {
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMdd");
 
     /**
-     * 序列 Key 保留时间（小时）
+     * 序列 Key 保留时间（小时），按天保留一天
      */
-    private static final long SEQ_KEY_TTL_HOURS = 48L;
+    private static final long SEQ_KEY_TTL_HOURS = 24L;
 
     /**
      * 生成下一个排队号码
