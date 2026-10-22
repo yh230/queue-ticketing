@@ -46,9 +46,17 @@
           <el-table-column prop="currentTicketNo" label="当前叫号" width="120">
             <template #default="{ row }">{{ row.currentTicketNo || '-' }}</template>
           </el-table-column>
-          <el-table-column label="操作" width="100">
+          <el-table-column label="操作" width="200">
             <template #default="{ row }">
-              <el-button size="small" @click.stop="selectQueue(row)">选择</el-button>
+              <el-button
+                size="small"
+                type="primary"
+                :loading="callingQueueId === Number(row.queueInstanceId)"
+                @click.stop="callQueue(row)"
+              >
+                下一位
+              </el-button>
+              <el-button size="small" @click.stop="selectQueue(row)">查看</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -94,6 +102,7 @@ import { ticketApi } from '../../api';
 
 const route = useRoute();
 const calling = ref(false);
+const callingQueueId = ref(null);
 const loadingOverview = ref(false);
 const overview = ref([]);
 const queueStatus = ref(null);
@@ -149,6 +158,28 @@ const refresh = async () => {
 const selectQueue = (row) => {
   form.queueInstanceId = Number(row.queueInstanceId);
   refresh();
+};
+
+const callQueue = async (row) => {
+  const instanceId = Number(row.queueInstanceId);
+  if (row.currentTicketNo) {
+    ElMessage.warning(`请先完成或过号「${row.queueName || '该队列'}」的 ${row.currentTicketNo}`);
+    return;
+  }
+  callingQueueId.value = instanceId;
+  try {
+    const ticket = await ticketApi.call({
+      queueInstanceId: instanceId,
+      counterId: form.counterId
+    });
+    ElMessage.success(`「${row.queueName || '队列'}」叫号：${ticket.ticketNo}`);
+    if (instanceId === Number(form.queueInstanceId)) {
+      currentTicket.value = ticket;
+    }
+    await refresh();
+  } finally {
+    callingQueueId.value = null;
+  }
 };
 
 const callNext = async () => {

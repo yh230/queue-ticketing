@@ -175,6 +175,15 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             throw new BizException(ErrorCodeEnum.QUEUE_NOT_FOUND);
         }
 
+        // 当前叫号未处理时不允许叫下一位
+        if (instance.getCurrentTicketId() != null) {
+            Ticket currentTicket = getById(instance.getCurrentTicketId());
+            if (currentTicket != null && TicketStatus.CALLED.getCode().equals(currentTicket.getStatus())) {
+                throw new BizException(ErrorCodeEnum.CALL_TICKET_FAILED,
+                        "请先完成或过号当前号码：" + currentTicket.getTicketNo());
+            }
+        }
+
         // 循环尝试叫号，支持多柜台并发
         int maxRetry = 3;
         for (int i = 0; i < maxRetry; i++) {
