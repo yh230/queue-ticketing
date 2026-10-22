@@ -328,9 +328,8 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         QueueInstance instance = queueInstanceService.getByIdSafe(ticket.getQueueInstanceId());
         if (TicketStatus.WAITING.getCode().equals(originalStatus)) {
             queueInstanceService.getBaseMapper().updateCurrentTicket(instance.getId(), null, -1);
-        } else if (TicketStatus.CALLED.getCode().equals(originalStatus)
-                && ticket.getId().equals(instance.getCurrentTicketId())) {
-            queueInstanceService.getBaseMapper().updateCurrentTicket(instance.getId(), null, 0);
+        } else if (TicketStatus.CALLED.getCode().equals(originalStatus)) {
+            queueInstanceService.getBaseMapper().clearCurrentTicket(instance.getId());
         }
 
         domainEventPublisher.publish(new TicketCancelledEvent(
@@ -458,7 +457,7 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
 
         if (instance.getCurrentTicketId() != null) {
             Ticket currentTicket = getById(instance.getCurrentTicketId());
-            if (currentTicket != null) {
+            if (currentTicket != null && TicketStatus.CALLED.getCode().equals(currentTicket.getStatus())) {
                 vo.setCurrentTicketNo(currentTicket.getTicketNo());
             }
         }

@@ -136,16 +136,22 @@ const callQueue = async (row) => {
 
 const serve = async (row) => {
   if (!row.currentTicketId) return;
-  await ticketApi.serve(row.currentTicketId);
-  ElMessage.success(`「${row.queueName}」${row.currentTicketNo} 已完成`);
-  await refresh();
+  try {
+    await ticketApi.serve(row.currentTicketId);
+    ElMessage.success(`「${row.queueName}」${row.currentTicketNo} 已完成`);
+  } finally {
+    await refresh();
+  }
 };
 
 const miss = async (row) => {
   if (!row.currentTicketId) return;
-  await ticketApi.miss({ ticketId: row.currentTicketId });
-  ElMessage.warning(`「${row.queueName}」${row.currentTicketNo} 已过号`);
-  await refresh();
+  try {
+    await ticketApi.miss({ ticketId: row.currentTicketId });
+    ElMessage.warning(`「${row.queueName}」${row.currentTicketNo} 已过号`);
+  } finally {
+    await refresh();
+  }
 };
 
 onMounted(() => {
