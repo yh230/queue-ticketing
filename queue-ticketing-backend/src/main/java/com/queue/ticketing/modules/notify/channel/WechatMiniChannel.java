@@ -20,10 +20,11 @@ public class WechatMiniChannel implements NotificationChannel {
     }
 
     @Override
-    public boolean send(NotifyLog log) {
+    public boolean send(NotifyLog notifyLog) {
         // 真实场景：调用微信小程序订阅消息发送接口
         // 此处记录日志模拟发送
-        log.info("发送微信小程序订阅消息，ticketId={}，templateCode={}", log.getTicketId(), log.getTemplateCode());
+        log.info("发送微信小程序订阅消息，ticketId={}，templateCode={}",
+                notifyLog.getTicketId(), notifyLog.getTemplateCode());
         return true;
     }
 }

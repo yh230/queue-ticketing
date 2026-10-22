@@ -22,6 +22,5 @@ public interface CounterConverter {
      * @return 柜台实体
      */
     @Mapping(target = "status", constant = "1")
-    @Mapping(target = "queueTemplateIds", ignore = true)
     Counter toEntity(CounterDTO dto);
 }

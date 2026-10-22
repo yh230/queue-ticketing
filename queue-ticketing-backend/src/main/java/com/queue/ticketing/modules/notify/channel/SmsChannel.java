@@ -20,9 +20,10 @@ public class SmsChannel implements NotificationChannel {
     }
 
     @Override
-    public boolean send(NotifyLog log) {
+    public boolean send(NotifyLog notifyLog) {
         // 真实场景：调用阿里云/腾讯云短信接口
-        log.info("发送短信通知，ticketId={}，templateCode={}", log.getTicketId(), log.getTemplateCode());
+        log.info("发送短信通知，ticketId={}，templateCode={}",
+                notifyLog.getTicketId(), notifyLog.getTemplateCode());
         return true;
     }
 }

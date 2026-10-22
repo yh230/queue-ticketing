@@ -163,3 +163,37 @@ CREATE TABLE IF NOT EXISTS notify_log (
     INDEX idx_ticket_id (ticket_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知日志表';
+
+-- ============================================================
+-- 演示数据
+-- ============================================================
+
+-- 演示商户
+INSERT IGNORE INTO merchant (id, name, industry_type, status) VALUES
+(1, '示例餐饮集团', 'CATERING', 1);
+
+-- 演示门店
+INSERT IGNORE INTO store (id, merchant_id, name, address, business_hours, status) VALUES
+(1, 1, '示例餐厅·人民广场店', '上海市黄浦区人民大道 100 号', '00:00-23:59', 1);
+
+-- 演示柜台（餐饮场景可理解为叫号台）
+INSERT IGNORE INTO counter (id, store_id, name, status) VALUES
+(1, 1, '1号叫号台', 1),
+(2, 1, '2号叫号台', 1);
+
+-- 演示队列模板
+INSERT IGNORE INTO queue_template (id, merchant_id, name, prefix, capacity, rules_json, status) VALUES
+(1, 1, '小桌（1-2人）', 'A', 100, '{"capacity":100,"missedDeferCount":1,"maxMissedCount":2,"aheadNotifyThreshold":3,"allowCancel":true,"expireMinutes":120}', 1),
+(2, 1, '大桌（3-6人）', 'B', 50, '{"capacity":50,"missedDeferCount":1,"maxMissedCount":2,"aheadNotifyThreshold":3,"allowCancel":true,"expireMinutes":120}', 1);
+
+-- 柜台可服务队列
+INSERT IGNORE INTO counter_queue_template (id, counter_id, queue_template_id) VALUES
+(1, 1, 1),
+(2, 1, 2),
+(3, 2, 1),
+(4, 2, 2);
+
+-- 今日队列实例（固定 ID 便于演示）
+INSERT IGNORE INTO queue_instance (id, store_id, template_id, queue_date, status, wait_count) VALUES
+(1, 1, 1, CURDATE(), 'OPEN', 0),
+(2, 1, 2, CURDATE(), 'OPEN', 0);

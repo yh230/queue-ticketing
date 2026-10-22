@@ -1,99 +1,83 @@
 <template>
-  <div class="call-console">
+  <div class="page">
     <el-card>
       <template #header>
         <span>叫号控制台</span>
       </template>
-      <el-form :model="form" label-width="120px">
-        <el-form-item label="队列实例ID">
-          <el-input v-model="form.queueInstanceId" placeholder="请输入队列实例ID" />
+
+      <el-form :model="form" label-width="120px" class="toolbar">
+        <el-form-item label="队列实例 ID">
+          <el-input v-model.number="form.queueInstanceId" style="width: 180px" />
         </el-form-item>
-        <el-form-item label="柜台ID">
-          <el-input v-model="form.counterId" placeholder="请输入柜台ID" />
+        <el-form-item label="柜台 ID">
+          <el-input v-model.number="form.counterId" style="width: 180px" />
         </el-form-item>
         <el-form-item>
-          <el-button type="primary" @click="callNext">下一位</el-button>
-          <el-button @click="resetForm">重置</el-button>
+          <el-button type="primary" :loading="calling" @click="callNext">下一位</el-button>
         </el-form-item>
       </el-form>
-    </el-card>
 
-    <el-card v-if="currentTicket" style="margin-top: 20px;">
-      <template #header>
-        <span>当前叫号</span>
-      </template>
-      <p>号码：{{ currentTicket.ticketNo }}</p>
-      <p>状态：{{ currentTicket.statusDesc }}</p>
-      <p>用户：{{ currentTicket.userId }}</p>
-      <el-button type="success" @click="serveTicket">标记完成</el-button>
-      <el-button type="warning" @click="missTicket">过号</el-button>
+      <el-empty v-if="!currentTicket" description="点击「下一位」开始叫号" />
+
+      <el-card v-else shadow="never">
+        <el-result icon="info" :title="`当前叫号：${currentTicket.ticketNo}`">
+          <template #sub-title>
+            <p>状态：{{ currentTicket.statusDesc }}</p>
+            <p>用户：{{ currentTicket.userId }}</p>
+          </template>
+          <template #extra>
+            <el-button type="success" @click="serve">标记完成</el-button>
+            <el-button type="warning" @click="miss">过号</el-button>
+          </template>
+        </el-result>
+      </el-card>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import axios from 'axios';
+import { reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
+import { ticketApi } from '../api';
 
-const form = ref({
-  queueInstanceId: '',
-  counterId: ''
-});
-
+const route = useRoute();
+const calling = ref(false);
 const currentTicket = ref(null);
 
+const form = reactive({
+  queueInstanceId: Number(route.query.instanceId) || 1,
+  counterId: Number(route.query.counterId) || 1
+});
+
 const callNext = async () => {
+  calling.value = true;
   try {
-    const res = await axios.post('/api/v1/tickets/call', {
-      queueInstanceId: Number(form.value.queueInstanceId),
-      counterId: Number(form.value.counterId)
+    currentTicket.value = await ticketApi.call({
+      queueInstanceId: form.queueInstanceId,
+      counterId: form.counterId
     });
-    if (res.data.code === 200) {
-      currentTicket.value = res.data.data;
-      ElMessage.success('叫号成功');
-    } else {
-      ElMessage.error(res.data.message);
-    }
-  } catch (e) {
-    ElMessage.error('叫号失败');
+    ElMessage.success('叫号成功');
+  } finally {
+    calling.value = false;
   }
 };
 
-const serveTicket = async () => {
+const serve = async () => {
   if (!currentTicket.value) return;
-  try {
-    const res = await axios.post(`/api/v1/tickets/${currentTicket.value.id}/serve`);
-    if (res.data.code === 200) {
-      currentTicket.value = res.data.data;
-      ElMessage.success('标记完成');
-    } else {
-      ElMessage.error(res.data.message);
-    }
-  } catch (e) {
-    ElMessage.error('操作失败');
-  }
+  currentTicket.value = await ticketApi.serve(currentTicket.value.id);
+  ElMessage.success('已标记完成');
 };
 
-const missTicket = async () => {
+const miss = async () => {
   if (!currentTicket.value) return;
-  try {
-    const res = await axios.post('/api/v1/tickets/miss', {
-      ticketId: currentTicket.value.id
-    });
-    if (res.data.code === 200) {
-      currentTicket.value = res.data.data;
-      ElMessage.warning('已标记过号');
-    } else {
-      ElMessage.error(res.data.message);
-    }
-  } catch (e) {
-    ElMessage.error('操作失败');
-  }
-};
-
-const resetForm = () => {
-  form.value = { queueInstanceId: '', counterId: '' };
-  currentTicket.value = null;
+  currentTicket.value = await ticketApi.miss({ ticketId: currentTicket.value.id });
+  ElMessage.warning('已标记过号');
 };
 </script>
+
+<style scoped>
+.toolbar {
+  margin-bottom: 20px;
+}
+</style>
