@@ -49,13 +49,14 @@ public class TicketNoGenerator {
             throw new BizException(ErrorCodeEnum.TICKET_NO_GENERATE_FAILED);
         }
 
-        // 序列首次创建时用数据库最大号兜底，避免 Redis 重启后号码变小
+        // 每次都用数据库最大号兜底，保证号码只增不减
+        Long dbMaxSeq = ticketMapper.selectMaxTicketSeq(queueInstanceId, prefix);
+        if (dbMaxSeq != null && dbMaxSeq >= seq) {
+            seq = dbMaxSeq + 1;
+            redisTemplate.opsForValue().set(seqKey, seq);
+        }
+
         if (seq == 1L) {
-            Long dbMaxSeq = ticketMapper.selectMaxTicketSeq(queueInstanceId, prefix);
-            if (dbMaxSeq != null && dbMaxSeq >= 1) {
-                seq = dbMaxSeq + 1;
-                redisTemplate.opsForValue().set(seqKey, seq);
-            }
             redisTemplate.expire(seqKey, SEQ_KEY_TTL_HOURS, TimeUnit.HOURS);
         }
 
