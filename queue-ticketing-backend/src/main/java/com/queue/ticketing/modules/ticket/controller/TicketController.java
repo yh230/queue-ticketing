@@ -2,6 +2,7 @@ package com.queue.ticketing.modules.ticket.controller;
 
 import com.queue.ticketing.common.result.Result;
 import com.queue.ticketing.common.annotation.Idempotent;
+import com.queue.ticketing.common.annotation.RateLimit;
 import com.queue.ticketing.common.annotation.RequireAuth;
 import com.queue.ticketing.modules.auth.context.LoginContext;
 import com.queue.ticketing.modules.auth.dto.LoginUser;
@@ -46,6 +47,7 @@ public class TicketController {
     @RequireAuth(allowClient = true)
     @PostMapping("/take")
     @Idempotent(prefix = "take-ticket", ttlSeconds = 300, message = "请勿重复取号")
+    @RateLimit(key = "take", limit = 10, windowSeconds = 60)
     public Result<TicketVO> takeTicket(@Valid @RequestBody TakeTicketRequest request) {
         LoginUser loginUser = LoginContext.get();
         request.setUserId(String.valueOf(loginUser.getUserId()));

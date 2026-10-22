@@ -33,12 +33,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 取号单服务
@@ -57,6 +59,10 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
     private final QueueTemplateService queueTemplateService;
     private final DomainEventPublisher domainEventPublisher;
     private final TicketConverter ticketConverter;
+    private final QueueCapacityService queueCapacityService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    private static final long ACTIVE_MARK_TTL_HOURS = 24L;
 
     private TicketService self;
 
@@ -85,9 +91,19 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
 
         QueueInstance instance = queueInstanceService.getOrCreateInstance(request.getStoreId(), request.getTemplateId(), queueDate);
 
+        // 锁外快速拦截重复取号，减少集中取号时的锁竞争
+        String activeKey = buildActiveKey(request.getUserId());
+        if (Boolean.TRUE.equals(redisTemplate.hasKey(activeKey))) {
+            List<Ticket> activeTickets = getBaseMapper().selectActiveByUserId(request.getUserId());
+            if (!activeTickets.isEmpty()) {
+                throw new BizException(ErrorCodeEnum.TICKET_DUPLICATE);
+            }
+            redisTemplate.delete(activeKey);
+        }
+
         return distributedLockUtil.executeWithLock(
                 QueueConstants.TAKE_LOCK_KEY_PREFIX + instance.getId(),
-                QueueConstants.LOCK_WAIT_SECONDS,
+                QueueConstants.TAKE_LOCK_WAIT_SECONDS,
                 QueueConstants.LOCK_LEASE_SECONDS,
                 () -> self.doTakeTicket(request, instance, template, rule)
         );
@@ -122,9 +138,8 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             throw new BizException(ErrorCodeEnum.TICKET_DUPLICATE);
         }
 
-        // 检查容量
-        Long waitingCount = getBaseMapper().countByInstanceAndStatus(instance.getId(), TicketStatus.WAITING.getCode());
-        if (waitingCount >= rule.getCapacity()) {
+        // 占用容量名额，Redis 计数器避免锁内重复 count
+        if (!queueCapacityService.tryAcquire(instance.getId(), rule.getCapacity())) {
             throw new BizException(ErrorCodeEnum.QUEUE_FULL);
         }
 
@@ -143,6 +158,10 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         ticket.setMissedCount(0);
         ticket.setIdempotencyKey(request.getIdempotencyKey());
         getBaseMapper().insert(ticket);
+
+        // 标记用户存在进行中的取号单，供后续请求快速拦截
+        redisTemplate.opsForValue().set(buildActiveKey(request.getUserId()), ticket.getId(),
+                ACTIVE_MARK_TTL_HOURS, TimeUnit.HOURS);
 
         // 更新等待人数（取号不更新当前叫号）
         queueInstanceService.getBaseMapper().updateCurrentTicket(instance.getId(), null, 1);
@@ -203,6 +222,7 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             if (rows > 0) {
                 ticket = getById(ticket.getId());
                 queueInstanceService.getBaseMapper().updateCurrentTicket(instance.getId(), ticket.getId(), -1);
+                queueCapacityService.release(instance.getId());
                 domainEventPublisher.publish(new TicketCalledEvent(
                         ticket.getId(), instance.getId(), ticket.getTicketNo(), ticket.getUserId(), request.getCounterId()
                 ));
@@ -257,6 +277,7 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         if (rule.getMaxMissedCount() != null && newMissedCount > rule.getMaxMissedCount()) {
             ticket.setStatus(TicketStatus.CANCELLED.getCode());
             updateById(ticket);
+            redisTemplate.delete(buildActiveKey(ticket.getUserId()));
             domainEventPublisher.publish(new TicketCancelledEvent(ticket.getId(), instance.getId(), ticket.getTicketNo(), ticket.getUserId()));
             log.info("过号次数超限作废，ticketId={}", ticket.getId());
             return buildTicketVO(ticket, instance.getId());
@@ -268,7 +289,16 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         updateById(ticket);
 
         if (rule.getMissedDeferCount() != null && rule.getMissedDeferCount() > 0) {
-            // 简单实现：直接改回 WAITING，由队列顺序自然排在后面
+            if (!queueCapacityService.tryAcquire(instance.getId(), rule.getCapacity())) {
+                ticket.setStatus(TicketStatus.CANCELLED.getCode());
+                updateById(ticket);
+                redisTemplate.delete(buildActiveKey(ticket.getUserId()));
+                domainEventPublisher.publish(new TicketCancelledEvent(
+                        ticket.getId(), instance.getId(), ticket.getTicketNo(), ticket.getUserId()));
+                log.info("过号顺延失败，队列已满作废，ticketId={}", ticket.getId());
+                return buildTicketVO(ticket, instance.getId());
+            }
+            // 直接改回 WAITING，由队列顺序自然排在后面
             ticket.setStatus(TicketStatus.WAITING.getCode());
             // 更新时间排在队尾
             ticket.setUpdatedAt(LocalDateTime.now());
@@ -329,9 +359,12 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         QueueInstance instance = queueInstanceService.getByIdSafe(ticket.getQueueInstanceId());
         if (TicketStatus.WAITING.getCode().equals(originalStatus)) {
             queueInstanceService.getBaseMapper().updateCurrentTicket(instance.getId(), null, -1);
+            queueCapacityService.release(instance.getId());
         } else if (TicketStatus.CALLED.getCode().equals(originalStatus)) {
             queueInstanceService.getBaseMapper().clearCurrentTicket(instance.getId());
         }
+
+        redisTemplate.delete(buildActiveKey(ticket.getUserId()));
 
         domainEventPublisher.publish(new TicketCancelledEvent(
                 ticket.getId(), instance.getId(), ticket.getTicketNo(), ticket.getUserId()
@@ -374,6 +407,7 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         ticket.setServedAt(LocalDateTime.now());
         updateById(ticket);
         queueInstanceService.getBaseMapper().clearCurrentTicket(ticket.getQueueInstanceId());
+        redisTemplate.delete(buildActiveKey(ticket.getUserId()));
 
         domainEventPublisher.publish(new TicketServedEvent(
                 ticket.getId(), ticket.getQueueInstanceId(), ticket.getTicketNo(), ticket.getUserId(), ticket.getCounterId()
@@ -409,6 +443,8 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             return null;
         }
         Ticket ticket = activeTickets.get(0);
+        redisTemplate.opsForValue().set(buildActiveKey(userId), ticket.getId(),
+                ACTIVE_MARK_TTL_HOURS, TimeUnit.HOURS);
         return buildTicketVO(ticket, ticket.getQueueInstanceId());
     }
 
@@ -506,5 +542,9 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         }
 
         return vo;
+    }
+
+    private String buildActiveKey(String userId) {
+        return QueueConstants.USER_ACTIVE_KEY_PREFIX + userId;
     }
 }

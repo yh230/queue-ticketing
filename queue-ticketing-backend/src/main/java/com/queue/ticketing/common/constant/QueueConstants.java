@@ -27,6 +27,21 @@ public final class QueueConstants {
     public static final String TAKE_LOCK_KEY_PREFIX = "lock:take:";
 
     /**
+     * 队列等待人数 Redis Key 前缀
+     */
+    public static final String QUEUE_WAITING_KEY_PREFIX = "queue:waiting:";
+
+    /**
+     * 用户进行中取号标记 Redis Key 前缀
+     */
+    public static final String USER_ACTIVE_KEY_PREFIX = "queue:active:";
+
+    /**
+     * 取号限流 Redis Key 前缀
+     */
+    public static final String TAKE_RATE_LIMIT_KEY_PREFIX = "rate:take:";
+
+    /**
      * 取号幂等 Redis Key 前缀
      */
     public static final String IDEMPOTENCY_KEY_PREFIX = "idempotency:";
@@ -45,6 +60,11 @@ public final class QueueConstants {
      * 分布式锁默认等待时间（秒）
      */
     public static final long LOCK_WAIT_SECONDS = 3L;
+
+    /**
+     * 取号锁等待时间（秒），集中取号时允许更长的排队
+     */
+    public static final long TAKE_LOCK_WAIT_SECONDS = 8L;
 
     /**
      * 分布式锁默认持有时间（秒）

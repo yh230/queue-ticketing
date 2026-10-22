@@ -12,6 +12,8 @@ import com.queue.ticketing.modules.store.mapper.CounterMapper;
 import com.queue.ticketing.modules.store.mapper.CounterQueueTemplateMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -35,12 +37,23 @@ public class QueueInstanceWarmupJob {
     private final QueueInstanceMapper queueInstanceMapper;
 
     /**
+     * 应用启动时预热当天队列实例，避免集中取号时争抢创建锁
+     */
+    @EventListener(ApplicationReadyEvent.class)
+    public void warmupTodayInstances() {
+        warmupInstances(LocalDate.now());
+    }
+
+    /**
      * 每天 23:30 预热次日队列实例
      */
     @Scheduled(cron = "0 30 23 * * ?")
     public void warmupNextDayInstances() {
-        LocalDate nextDate = LocalDate.now().plusDays(1);
-        log.info("开始预热次日队列实例，date={}", nextDate);
+        warmupInstances(LocalDate.now().plusDays(1));
+    }
+
+    private void warmupInstances(LocalDate queueDate) {
+        log.info("开始预热队列实例，date={}", queueDate);
 
         int pageSize = 100;
         int current = 1;
@@ -61,7 +74,7 @@ public class QueueInstanceWarmupJob {
                 List<Counter> counters = counterMapper.selectBatchIds(counterIds);
                 for (Counter counter : counters) {
                     if (counter.getStatus() == 1) {
-                        createInstanceIfNotExists(counter.getStoreId(), template.getId(), nextDate);
+                        createInstanceIfNotExists(counter.getStoreId(), template.getId(), queueDate);
                     }
                 }
             }
@@ -72,7 +85,7 @@ public class QueueInstanceWarmupJob {
             current++;
         }
 
-        log.info("次日队列实例预热完成");
+        log.info("队列实例预热完成，date={}", queueDate);
     }
 
     private void createInstanceIfNotExists(Long storeId, Long templateId, LocalDate queueDate) {

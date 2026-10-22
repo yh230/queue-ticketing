@@ -110,6 +110,7 @@ CREATE TABLE IF NOT EXISTS ticket (
     UNIQUE KEY uk_queue_ticket_no (queue_instance_id, ticket_no),
     INDEX idx_store_id (store_id),
     INDEX idx_user_id (user_id),
+    INDEX idx_instance_status (queue_instance_id, status),
     INDEX idx_status (status),
     INDEX idx_idempotency_key (idempotency_key),
     INDEX idx_created_at (created_at)
