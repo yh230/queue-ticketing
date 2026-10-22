@@ -62,7 +62,11 @@
           </template>
           <el-table :data="(queue.waitingTickets || []).slice(0, 10)" border max-height="360">
             <el-table-column type="index" label="#" width="60" />
-            <el-table-column prop="ticketNo" label="号码" width="120" />
+            <el-table-column prop="ticketNo" label="号码" width="100" />
+            <el-table-column prop="sourceDesc" label="来源" width="100" />
+            <el-table-column prop="userPhone" label="手机号" width="130">
+              <template #default="{ row }">{{ row.userPhone || '-' }}</template>
+            </el-table-column>
             <el-table-column prop="createdAt" label="取号时间" />
           </el-table>
         </el-card>

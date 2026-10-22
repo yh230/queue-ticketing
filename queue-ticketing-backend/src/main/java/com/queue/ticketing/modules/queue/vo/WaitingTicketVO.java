@@ -34,6 +34,21 @@ public class WaitingTicketVO implements Serializable {
     private String status;
 
     /**
+     * 取号来源：MINI_PROGRAM/STAFF
+     */
+    private String source;
+
+    /**
+     * 来源描述
+     */
+    private String sourceDesc;
+
+    /**
+     * 脱敏手机号
+     */
+    private String userPhone;
+
+    /**
      * 创建时间
      */
     private LocalDateTime createdAt;

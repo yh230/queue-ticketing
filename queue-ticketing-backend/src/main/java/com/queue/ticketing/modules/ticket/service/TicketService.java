@@ -1,5 +1,6 @@
 package com.queue.ticketing.modules.ticket.service;
 
+import cn.hutool.core.util.DesensitizedUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.queue.ticketing.common.exception.BizException;
 import com.queue.ticketing.common.exception.ErrorCodeEnum;
@@ -468,6 +469,10 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             waitingVo.setTicketId(ticket.getId());
             waitingVo.setTicketNo(ticket.getTicketNo());
             waitingVo.setStatus(ticket.getStatus());
+            waitingVo.setSource(ticket.getSource());
+            waitingVo.setSourceDesc("STAFF".equals(ticket.getSource()) ? "店员代取" : "小程序");
+            waitingVo.setUserPhone(ticket.getUserPhone() == null
+                    ? null : DesensitizedUtil.mobilePhone(ticket.getUserPhone()));
             waitingVo.setCreatedAt(ticket.getCreatedAt());
             return waitingVo;
         }).toList();
