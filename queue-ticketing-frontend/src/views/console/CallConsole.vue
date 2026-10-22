@@ -16,7 +16,7 @@
         </div>
       </template>
       <el-table v-loading="loading" :data="overview" border>
-        <el-table-column prop="queueInstanceId" label="实例 ID" width="100" />
+        <el-table-column prop="templateId" label="模板 ID" width="100" />
         <el-table-column prop="queueName" label="队列名称" min-width="150" />
         <el-table-column prop="status" label="状态" width="100">
           <template #default="{ row }">
@@ -79,7 +79,7 @@
 import { onMounted, onUnmounted, ref } from 'vue';
 import { useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { storeApi, ticketApi } from '../../api';
+import { queueCenterApi, storeApi } from '../../api';
 
 const route = useRoute();
 const storeId = Number(route.query.storeId) || 1;
@@ -112,7 +112,7 @@ const loadStore = async () => {
 const refresh = async () => {
   loading.value = true;
   try {
-    overview.value = await ticketApi.getQueueOverview(storeId);
+    overview.value = await queueCenterApi.overview(storeId);
   } catch (e) {
     // 轮询失败不打断页面
   } finally {
@@ -125,10 +125,11 @@ const callQueue = async (row) => {
     ElMessage.warning(`请先完成或过号「${row.queueName}」的 ${row.currentTicketNo}`);
     return;
   }
-  callingQueueId.value = Number(row.queueInstanceId);
+  callingQueueId.value = Number(row.templateId);
   try {
-    const ticket = await ticketApi.call({
-      queueInstanceId: Number(row.queueInstanceId),
+    const ticket = await queueCenterApi.call({
+      storeId,
+      templateId: row.templateId,
       counterId
     });
     ElMessage.success(`「${row.queueName}」叫号：${ticket.ticketNo}`);
@@ -139,9 +140,13 @@ const callQueue = async (row) => {
 };
 
 const serve = async (row) => {
-  if (!row.currentTicketId) return;
+  if (!row.currentTicketNo) return;
   try {
-    await ticketApi.serve(row.currentTicketId);
+    await queueCenterApi.finish({
+      storeId,
+      templateId: row.templateId,
+      ticketNo: row.currentTicketNo
+    });
     ElMessage.success(`「${row.queueName}」${row.currentTicketNo} 已完成`);
   } finally {
     await refresh();
@@ -149,9 +154,13 @@ const serve = async (row) => {
 };
 
 const miss = async (row) => {
-  if (!row.currentTicketId) return;
+  if (!row.currentTicketNo) return;
   try {
-    await ticketApi.miss({ ticketId: row.currentTicketId });
+    await queueCenterApi.miss({
+      storeId,
+      templateId: row.templateId,
+      ticketNo: row.currentTicketNo
+    });
     ElMessage.warning(`「${row.queueName}」${row.currentTicketNo} 已过号`);
   } finally {
     await refresh();

@@ -16,7 +16,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @EnableAsync
 @EnableScheduling
 @ServletComponentScan
-@MapperScan("com.queue.ticketing.modules.**.mapper")
+@MapperScan({"com.queue.ticketing.modules.**.mapper", "com.queue.ticketing.modules.**.mq"})
 @SpringBootApplication(scanBasePackages = "com.queue.ticketing")
 public class QueueTicketingApplication {
 

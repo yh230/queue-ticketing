@@ -57,7 +57,7 @@
 <script setup>
 import { computed, onUnmounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
-import { clientApi, ticketApi } from '../../api';
+import { clientApi, queueCenterApi } from '../../api';
 
 const loading = ref(false);
 const ticket = ref(null);
@@ -95,7 +95,7 @@ const takeTicket = async () => {
   try {
     clientToken.value = await clientApi.login({ phone: form.phone });
 
-    const activeTicket = await ticketApi.getActive(clientToken.value);
+    const activeTicket = await queueCenterApi.my(form.storeId, clientToken.value);
     if (activeTicket) {
       isExisting.value = true;
       ticket.value = activeTicket;
@@ -103,12 +103,11 @@ const takeTicket = async () => {
       return;
     }
 
-    ticket.value = await ticketApi.take({
+    ticket.value = await queueCenterApi.take({
       storeId: form.storeId,
       templateId: form.templateId,
       source: 'MINI_PROGRAM',
-      userPhone: form.phone,
-      idempotencyKey: `${form.phone}-${Date.now()}`
+      userPhone: form.phone
     }, clientToken.value);
     isExisting.value = false;
     ElMessage.success('取号成功');
@@ -121,7 +120,8 @@ const takeTicket = async () => {
 const refresh = async () => {
   if (!ticket.value) return;
   try {
-    const latest = await ticketApi.get(ticket.value.id);
+    const latest = await queueCenterApi.progress(
+      form.storeId, form.templateId, ticket.value.ticketNo, clientToken.value);
     if (latest.status === 'CALLED' && ticket.value.status !== 'CALLED') {
       ElMessage.warning('已叫号，请尽快到店');
     }
@@ -139,7 +139,11 @@ const refresh = async () => {
 
 const cancel = async () => {
   if (!ticket.value) return;
-  await ticketApi.cancel({ ticketId: ticket.value.id }, clientToken.value);
+  await queueCenterApi.cancel({
+    storeId: form.storeId,
+    templateId: form.templateId,
+    ticketNo: ticket.value.ticketNo
+  }, clientToken.value);
   ticket.value = null;
   isExisting.value = false;
   stopPolling();

@@ -104,10 +104,12 @@ CREATE TABLE IF NOT EXISTS ticket (
     served_at           DATETIME        DEFAULT NULL COMMENT '服务完成时间',
     missed_count        INT             NOT NULL DEFAULT 0 COMMENT '过号次数',
     idempotency_key     VARCHAR(64)     DEFAULT NULL COMMENT '幂等键',
+    message_id          VARCHAR(64)     DEFAULT NULL COMMENT 'MQ消息ID，用于消费幂等',
     created_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     updated_at          DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     deleted             TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
     UNIQUE KEY uk_queue_ticket_no (queue_instance_id, ticket_no),
+    UNIQUE KEY uk_message_id (message_id),
     INDEX idx_store_id (store_id),
     INDEX idx_user_id (user_id),
     INDEX idx_instance_status (queue_instance_id, status),
@@ -164,6 +166,22 @@ CREATE TABLE IF NOT EXISTS notify_log (
     INDEX idx_ticket_id (ticket_id),
     INDEX idx_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='通知日志表';
+
+-- 本地消息表
+CREATE TABLE IF NOT EXISTS local_message (
+    id              BIGINT          NOT NULL PRIMARY KEY COMMENT '消息ID',
+    message_id      VARCHAR(64)     NOT NULL COMMENT '业务消息ID',
+    topic           VARCHAR(64)     NOT NULL COMMENT '消息主题',
+    payload         TEXT            NOT NULL COMMENT '消息内容',
+    status          TINYINT         NOT NULL DEFAULT 0 COMMENT '状态：0-待发送 1-已发送 2-失败',
+    retry_count     INT             NOT NULL DEFAULT 0 COMMENT '重试次数',
+    next_retry_at   DATETIME        DEFAULT NULL COMMENT '下次重试时间',
+    created_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    updated_at      DATETIME        NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+    deleted         TINYINT         NOT NULL DEFAULT 0 COMMENT '逻辑删除：1-已删除 0-未删除',
+    UNIQUE KEY uk_message_id (message_id),
+    INDEX idx_status_retry (status, next_retry_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='本地消息表';
 
 -- ============================================================
 -- 演示数据

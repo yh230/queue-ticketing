@@ -79,4 +79,9 @@ public class Ticket extends BaseEntity {
      * 幂等键
      */
     private String idempotencyKey;
+
+    /**
+     * MQ 消息ID，用于消费幂等
+     */
+    private String messageId;
 }
