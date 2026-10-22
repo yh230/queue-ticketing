@@ -24,6 +24,21 @@ public class QueueStatusVO implements Serializable {
     private Long queueInstanceId;
 
     /**
+     * 门店ID
+     */
+    private Long storeId;
+
+    /**
+     * 队列模板ID
+     */
+    private Long templateId;
+
+    /**
+     * 队列名称
+     */
+    private String queueName;
+
+    /**
      * 队列状态：OPEN/PAUSED/CLOSED
      */
     private String status;

@@ -414,12 +414,38 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         if (instance == null) {
             throw new BizException(ErrorCodeEnum.QUEUE_NOT_FOUND);
         }
+        return buildQueueStatus(instance);
+    }
 
+    /**
+     * 查询门店今日所有队列的实时状态
+     *
+     * @param storeId 门店ID，为空时查询全部
+     * @return 队列状态列表
+     */
+    public List<QueueStatusVO> getQueueOverview(Long storeId) {
+        List<QueueInstance> instances = queueInstanceService.list(
+                new com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper<QueueInstance>()
+                        .eq(storeId != null, QueueInstance::getStoreId, storeId)
+                        .eq(QueueInstance::getQueueDate, LocalDate.now())
+                        .orderByAsc(QueueInstance::getId)
+        );
+        return instances.stream().map(this::buildQueueStatus).toList();
+    }
+
+    private QueueStatusVO buildQueueStatus(QueueInstance instance) {
         QueueStatusVO vo = new QueueStatusVO();
         vo.setQueueInstanceId(instance.getId());
+        vo.setStoreId(instance.getStoreId());
+        vo.setTemplateId(instance.getTemplateId());
         vo.setStatus(instance.getStatus());
         vo.setWaitCount(instance.getWaitCount());
         vo.setCurrentTicketId(instance.getCurrentTicketId());
+
+        QueueTemplate template = queueTemplateService.getById(instance.getTemplateId());
+        if (template != null) {
+            vo.setQueueName(template.getName());
+        }
 
         if (instance.getCurrentTicketId() != null) {
             Ticket currentTicket = getById(instance.getCurrentTicketId());

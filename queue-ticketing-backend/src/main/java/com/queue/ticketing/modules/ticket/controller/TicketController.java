@@ -19,7 +19,10 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
 
 /**
  * 取号单接口
@@ -83,6 +86,18 @@ public class TicketController {
     @GetMapping("/queue/{queueInstanceId}/status")
     public Result<QueueStatusVO> getQueueStatus(@PathVariable Long queueInstanceId) {
         return Result.success(ticketService.getQueueStatus(queueInstanceId));
+    }
+
+    /**
+     * 查询门店今日所有队列的实时状态
+     *
+     * @param storeId 门店ID，为空时查询全部
+     * @return 队列状态列表
+     */
+    @RequireAuth
+    @GetMapping("/queues/status")
+    public Result<List<QueueStatusVO>> getQueueOverview(@RequestParam(required = false) Long storeId) {
+        return Result.success(ticketService.getQueueOverview(storeId));
     }
 
     /**

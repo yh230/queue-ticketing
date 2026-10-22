@@ -9,11 +9,14 @@
       </template>
 
       <el-form :model="form" label-width="120px" class="toolbar">
-        <el-form-item label="队列实例 ID">
-          <el-input v-model.number="form.queueInstanceId" style="width: 180px" @change="refresh" />
+        <el-form-item label="门店 ID">
+          <el-input v-model.number="form.storeId" style="width: 160px" @change="refresh" />
+        </el-form-item>
+        <el-form-item label="当前队列">
+          <el-input v-model.number="form.queueInstanceId" style="width: 160px" @change="refresh" />
         </el-form-item>
         <el-form-item label="柜台 ID">
-          <el-input v-model.number="form.counterId" style="width: 180px" />
+          <el-input v-model.number="form.counterId" style="width: 160px" />
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="calling" @click="callNext">下一位</el-button>
@@ -21,7 +24,37 @@
         </el-form-item>
       </el-form>
 
-      <el-row :gutter="20">
+      <el-card shadow="never" class="overview">
+        <template #header>队列总览</template>
+        <el-table
+          v-loading="loadingOverview"
+          :data="overview"
+          border
+          highlight-current-row
+          @row-click="selectQueue"
+        >
+          <el-table-column prop="queueInstanceId" label="实例 ID" width="100" />
+          <el-table-column prop="queueName" label="队列名称" min-width="140" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'OPEN' ? 'success' : 'info'" size="small">
+                {{ statusMap[row.status] || row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
+          <el-table-column prop="waitCount" label="等待人数" width="100" />
+          <el-table-column prop="currentTicketNo" label="当前叫号" width="120">
+            <template #default="{ row }">{{ row.currentTicketNo || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="100">
+            <template #default="{ row }">
+              <el-button size="small" @click.stop="selectQueue(row)">选择</el-button>
+            </template>
+          </el-table-column>
+        </el-table>
+      </el-card>
+
+      <el-row :gutter="20" class="detail">
         <el-col :span="10">
           <el-card shadow="never">
             <template #header>当前叫号</template>
@@ -41,7 +74,7 @@
         <el-col :span="14">
           <el-card shadow="never">
             <template #header>等待队列（{{ queueStatus?.waitCount ?? 0 }} 人）</template>
-            <el-table :data="queueStatus?.waitingTickets ?? []" border max-height="420">
+            <el-table :data="queueStatus?.waitingTickets ?? []" border max-height="360">
               <el-table-column type="index" label="#" width="60" />
               <el-table-column prop="ticketNo" label="号码" width="120" />
               <el-table-column prop="createdAt" label="取号时间" />
@@ -61,19 +94,25 @@ import { ticketApi } from '../../api';
 
 const route = useRoute();
 const calling = ref(false);
+const loadingOverview = ref(false);
+const overview = ref([]);
 const queueStatus = ref(null);
 const currentTicket = ref(null);
 let timer = null;
 
 const form = reactive({
+  storeId: Number(route.query.storeId) || 1,
   queueInstanceId: Number(route.query.instanceId) || 1,
   counterId: Number(route.query.counterId) || 1
 });
 
-const statusText = computed(() => {
-  const status = queueStatus.value?.status;
-  return { OPEN: '开放中', PAUSED: '已暂停', CLOSED: '已关闭' }[status] || '未知';
-});
+const statusMap = {
+  OPEN: '开放中',
+  PAUSED: '已暂停',
+  CLOSED: '已关闭'
+};
+
+const statusText = computed(() => statusMap[queueStatus.value?.status] || '未知');
 
 const statusTagType = computed(() => {
   const status = queueStatus.value?.status;
@@ -81,6 +120,15 @@ const statusTagType = computed(() => {
 });
 
 const refresh = async () => {
+  loadingOverview.value = true;
+  try {
+    overview.value = await ticketApi.getQueueOverview(form.storeId);
+  } catch (e) {
+    // 总览失败不打断叫号
+  } finally {
+    loadingOverview.value = false;
+  }
+
   try {
     queueStatus.value = await ticketApi.getQueueStatus(form.queueInstanceId);
     if (queueStatus.value.currentTicketId) {
@@ -93,8 +141,14 @@ const refresh = async () => {
       currentTicket.value = null;
     }
   } catch (e) {
-    // 轮询失败不打断操作
+    queueStatus.value = null;
+    currentTicket.value = null;
   }
+};
+
+const selectQueue = (row) => {
+  form.queueInstanceId = Number(row.queueInstanceId);
+  refresh();
 };
 
 const callNext = async () => {
@@ -152,6 +206,14 @@ onUnmounted(() => {
 }
 
 .toolbar {
+  margin-bottom: 10px;
+}
+
+.overview {
   margin-bottom: 20px;
+}
+
+.detail {
+  margin-top: 4px;
 }
 </style>
