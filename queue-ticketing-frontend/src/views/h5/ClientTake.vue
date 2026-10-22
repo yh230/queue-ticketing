@@ -129,7 +129,7 @@ const refresh = async () => {
 
 const cancel = async () => {
   if (!ticket.value) return;
-  await ticketApi.cancel({ ticketId: ticket.value.id });
+  await ticketApi.cancel({ ticketId: ticket.value.id }, clientToken.value);
   ticket.value = null;
   stopPolling();
   ElMessage.warning('已取消取号');

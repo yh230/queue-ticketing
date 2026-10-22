@@ -98,7 +98,13 @@ public class TicketController {
     @PostMapping("/cancel")
     public Result<Void> cancelTicket(@Valid @RequestBody CancelTicketRequest request) {
         LoginUser loginUser = LoginContext.get();
-        request.setUserId(String.valueOf(loginUser.getUserId()));
+        if ("CLIENT".equals(loginUser.getUserType())) {
+            // C 端只能取消本人取号单
+            request.setUserId(loginUser.getUserId());
+        } else {
+            // B 端员工有权取消队列中的任意取号单
+            request.setUserId(null);
+        }
         ticketService.cancelTicket(request);
         return Result.success();
     }

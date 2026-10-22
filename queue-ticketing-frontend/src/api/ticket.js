@@ -11,8 +11,9 @@ export const ticketApi = {
   get(ticketId) {
     return request.get(`/tickets/${ticketId}`);
   },
-  cancel(data) {
-    return request.post('/tickets/cancel', data);
+  cancel(data, token) {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {};
+    return request.post('/tickets/cancel', data, { headers });
   },
   call(data) {
     return request.post('/tickets/call', data);
