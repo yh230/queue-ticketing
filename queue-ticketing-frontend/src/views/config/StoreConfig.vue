@@ -40,15 +40,23 @@
       </el-row>
 
       <el-card shadow="never" class="instances">
-        <template #header>今日队列实例</template>
-        <el-table v-loading="loading" :data="instances" border>
-          <el-table-column prop="id" label="实例 ID" width="100" />
+        <template #header>实时队列状态（Redis）</template>
+        <el-table v-loading="loading" :data="queues" border>
           <el-table-column prop="storeId" label="门店 ID" width="100" />
           <el-table-column prop="templateId" label="模板 ID" width="100" />
-          <el-table-column prop="queueDate" label="日期" width="140" />
-          <el-table-column prop="status" label="状态" width="120" />
+          <el-table-column prop="queueName" label="队列名称" min-width="150" />
+          <el-table-column prop="status" label="状态" width="100">
+            <template #default="{ row }">
+              <el-tag :type="row.status === 'OPEN' ? 'success' : 'info'" size="small">
+                {{ statusMap[row.status] || row.status }}
+              </el-tag>
+            </template>
+          </el-table-column>
           <el-table-column prop="waitCount" label="等待人数" width="100" />
-          <el-table-column label="操作">
+          <el-table-column prop="currentTicketNo" label="当前叫号" width="120">
+            <template #default="{ row }">{{ row.currentTicketNo || '-' }}</template>
+          </el-table-column>
+          <el-table-column label="操作" width="120">
             <template #default="{ row }">
               <el-button size="small" @click="goConsole(row)">去叫号</el-button>
             </template>
@@ -63,14 +71,20 @@
 import { onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
-import { storeApi, queueApi } from '../../api';
+import { storeApi, queueApi, queueCenterApi } from '../../api';
 
 const router = useRouter();
 const merchantId = ref(1);
 const loading = ref(false);
 const stores = ref([]);
 const templates = ref([]);
-const instances = ref([]);
+const queues = ref([]);
+
+const statusMap = {
+  OPEN: '开放中',
+  PAUSED: '已暂停',
+  CLOSED: '已关闭'
+};
 
 const loadData = async () => {
   loading.value = true;
@@ -80,16 +94,10 @@ const loadData = async () => {
 
     const results = [];
     for (const store of stores.value) {
-      for (const template of templates.value) {
-        try {
-          const instance = await queueApi.getOrCreateInstance(store.id, template.id);
-          results.push(instance);
-        } catch (e) {
-          // 单个队列加载失败不影响其他队列
-        }
-      }
+      const list = await queueCenterApi.overview(store.id);
+      results.push(...list);
     }
-    instances.value = results;
+    queues.value = results;
   } catch (e) {
     ElMessage.error('加载失败，请检查后端服务');
   } finally {
@@ -98,7 +106,10 @@ const loadData = async () => {
 };
 
 const goConsole = (row) => {
-  router.push({ path: '/console', query: { instanceId: row.id, counterId: 1 } });
+  router.push({
+    path: '/console',
+    query: { storeId: row.storeId, templateId: row.templateId, counterId: 1 }
+  });
 };
 
 onMounted(loadData);
