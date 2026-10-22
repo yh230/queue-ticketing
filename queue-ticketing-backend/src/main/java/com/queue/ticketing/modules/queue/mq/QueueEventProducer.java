@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 /**
@@ -27,10 +28,11 @@ public class QueueEventProducer {
     private final LocalMessageService localMessageService;
 
     /**
-     * 发送排队事件，失败写入本地消息表
+     * 异步发送排队事件，失败写入本地消息表
      *
      * @param message 事件消息
      */
+    @Async("eventExecutor")
     public void send(QueueEventMessage message) {
         String payload;
         try {
