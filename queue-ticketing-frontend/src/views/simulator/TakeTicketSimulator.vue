@@ -13,8 +13,11 @@
             <el-form-item label="门店 ID">
               <el-input v-model.number="form.storeId" />
             </el-form-item>
-            <el-form-item label="队列模板 ID">
-              <el-input v-model.number="form.templateId" />
+            <el-form-item label="桌型">
+              <el-select v-model="form.templateId" style="width: 100%">
+                <el-option label="小桌（1-2人）" :value="1" />
+                <el-option label="大桌（3-6人）" :value="2" />
+              </el-select>
             </el-form-item>
             <el-form-item>
               <el-button type="primary" :loading="loading" @click="takeTicket">取号</el-button>
