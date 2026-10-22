@@ -1,18 +1,21 @@
 <template>
   <div class="app">
-    <el-menu
-      v-if="showNav"
-      mode="horizontal"
-      :default-active="route.path"
-      router
-      class="nav"
-    >
-      <el-menu-item index="/console">叫号控制台</el-menu-item>
-      <el-menu-item index="/config">门店与队列</el-menu-item>
-      <el-menu-item index="/simulator">取号模拟</el-menu-item>
-      <el-menu-item index="/h5">C 端取号页</el-menu-item>
-      <el-menu-item v-if="loggedIn" index="logout" @click="logout">退出登录</el-menu-item>
-    </el-menu>
+    <div v-if="showNav" class="nav-bar">
+      <el-menu
+        mode="horizontal"
+        :default-active="route.path"
+        router
+        class="nav"
+      >
+        <el-menu-item index="/console">叫号控制台</el-menu-item>
+        <el-menu-item index="/config">门店与队列</el-menu-item>
+        <el-menu-item index="/simulator">取号模拟</el-menu-item>
+        <el-menu-item index="/h5">C 端取号页</el-menu-item>
+      </el-menu>
+      <el-button v-if="loggedIn" link type="danger" class="logout" @click="logout">
+        退出登录
+      </el-button>
+    </div>
 
     <router-view />
   </div>
@@ -46,8 +49,22 @@ body {
   min-height: 100vh;
 }
 
-.nav {
+.nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 20px;
+  background: #fff;
   margin-bottom: 20px;
+}
+
+.nav {
+  flex: 1;
+  border-bottom: none;
+}
+
+.logout {
+  margin-left: 12px;
 }
 
 .page {

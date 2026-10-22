@@ -22,5 +22,8 @@ export const ticketApi = {
   },
   serve(ticketId) {
     return request.post(`/tickets/${ticketId}/serve`);
+  },
+  getQueueStatus(queueInstanceId) {
+    return request.get(`/tickets/queue/${queueInstanceId}/status`);
   }
 };

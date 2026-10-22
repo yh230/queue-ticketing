@@ -12,6 +12,8 @@ import com.queue.ticketing.modules.queue.entity.QueueTemplate;
 import com.queue.ticketing.modules.queue.enums.QueueStatus;
 import com.queue.ticketing.modules.queue.service.QueueInstanceService;
 import com.queue.ticketing.modules.queue.service.QueueTemplateService;
+import com.queue.ticketing.modules.queue.vo.QueueStatusVO;
+import com.queue.ticketing.modules.queue.vo.WaitingTicketVO;
 import com.queue.ticketing.modules.ticket.converter.TicketConverter;
 import com.queue.ticketing.modules.ticket.dto.CallTicketRequest;
 import com.queue.ticketing.modules.ticket.dto.CancelTicketRequest;
@@ -239,6 +241,8 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
 
         int newMissedCount = ticket.getMissedCount() + 1;
 
+        queueInstanceService.getBaseMapper().clearCurrentTicket(instance.getId());
+
         // 超过最大过号次数则作废
         if (rule.getMaxMissedCount() != null && newMissedCount > rule.getMaxMissedCount()) {
             ticket.setStatus(TicketStatus.CANCELLED.getCode());
@@ -360,6 +364,7 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
         ticket.setStatus(TicketStatus.SERVED.getCode());
         ticket.setServedAt(LocalDateTime.now());
         updateById(ticket);
+        queueInstanceService.getBaseMapper().clearCurrentTicket(ticket.getQueueInstanceId());
 
         domainEventPublisher.publish(new TicketServedEvent(
                 ticket.getId(), ticket.getQueueInstanceId(), ticket.getTicketNo(), ticket.getUserId(), ticket.getCounterId()
@@ -381,6 +386,44 @@ public class TicketService extends ServiceImpl<TicketMapper, Ticket> {
             throw new BizException(ErrorCodeEnum.TICKET_NOT_FOUND);
         }
         return buildTicketVO(ticket, ticket.getQueueInstanceId());
+    }
+
+    /**
+     * 查询队列实时状态
+     *
+     * @param queueInstanceId 队列实例ID
+     * @return 队列状态
+     */
+    public QueueStatusVO getQueueStatus(Long queueInstanceId) {
+        QueueInstance instance = queueInstanceService.getById(queueInstanceId);
+        if (instance == null) {
+            throw new BizException(ErrorCodeEnum.QUEUE_NOT_FOUND);
+        }
+
+        QueueStatusVO vo = new QueueStatusVO();
+        vo.setQueueInstanceId(instance.getId());
+        vo.setStatus(instance.getStatus());
+        vo.setWaitCount(instance.getWaitCount());
+        vo.setCurrentTicketId(instance.getCurrentTicketId());
+
+        if (instance.getCurrentTicketId() != null) {
+            Ticket currentTicket = getById(instance.getCurrentTicketId());
+            if (currentTicket != null) {
+                vo.setCurrentTicketNo(currentTicket.getTicketNo());
+            }
+        }
+
+        List<Ticket> waitingTickets = getBaseMapper().selectWaitingTicketsOrdered(instance.getId(), 1000);
+        List<WaitingTicketVO> waitingVos = waitingTickets.stream().map(ticket -> {
+            WaitingTicketVO waitingVo = new WaitingTicketVO();
+            waitingVo.setTicketId(ticket.getId());
+            waitingVo.setTicketNo(ticket.getTicketNo());
+            waitingVo.setStatus(ticket.getStatus());
+            waitingVo.setCreatedAt(ticket.getCreatedAt());
+            return waitingVo;
+        }).toList();
+        vo.setWaitingTickets(waitingVos);
+        return vo;
     }
 
     /**

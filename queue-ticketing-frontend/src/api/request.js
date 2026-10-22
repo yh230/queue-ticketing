@@ -17,9 +17,23 @@ request.interceptors.request.use((config) => {
   return config;
 });
 
+const isClientPage = () => window.location.pathname.startsWith('/h5');
+
+const redirectToLogin = () => {
+  removeToken();
+  if (!isClientPage() && window.location.pathname !== '/login') {
+    window.location.href = '/login';
+  }
+};
+
 request.interceptors.response.use(
   (response) => {
     const data = response.data;
+    if (data.code === 401) {
+      ElMessage.error('登录已过期，请重新登录');
+      redirectToLogin();
+      return Promise.reject(new Error(data.message || '未授权'));
+    }
     if (data.code !== 200) {
       ElMessage.error(data.message || '请求失败');
       return Promise.reject(new Error(data.message || '请求失败'));
@@ -28,8 +42,8 @@ request.interceptors.response.use(
   },
   (error) => {
     if (error.response && error.response.status === 401) {
-      removeToken();
       ElMessage.error('登录已过期，请重新登录');
+      redirectToLogin();
     } else {
       ElMessage.error(error.message || '网络异常');
     }

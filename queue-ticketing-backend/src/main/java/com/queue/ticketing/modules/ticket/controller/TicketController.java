@@ -5,6 +5,7 @@ import com.queue.ticketing.common.annotation.Idempotent;
 import com.queue.ticketing.common.annotation.RequireAuth;
 import com.queue.ticketing.modules.auth.context.LoginContext;
 import com.queue.ticketing.modules.auth.dto.LoginUser;
+import com.queue.ticketing.modules.queue.vo.QueueStatusVO;
 import com.queue.ticketing.modules.ticket.dto.CallTicketRequest;
 import com.queue.ticketing.modules.ticket.dto.CancelTicketRequest;
 import com.queue.ticketing.modules.ticket.dto.MissTicketRequest;
@@ -58,6 +59,18 @@ public class TicketController {
     @GetMapping("/{ticketId}")
     public Result<TicketVO> getTicket(@PathVariable Long ticketId) {
         return Result.success(ticketService.getTicketDetail(ticketId));
+    }
+
+    /**
+     * 查询队列实时状态
+     *
+     * @param queueInstanceId 队列实例ID
+     * @return 队列状态
+     */
+    @RequireAuth(allowClient = true)
+    @GetMapping("/queue/{queueInstanceId}/status")
+    public Result<QueueStatusVO> getQueueStatus(@PathVariable Long queueInstanceId) {
+        return Result.success(ticketService.getQueueStatus(queueInstanceId));
     }
 
     /**

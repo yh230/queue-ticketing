@@ -34,6 +34,16 @@ public interface QueueInstanceMapper extends BaseMapper<QueueInstance> {
                             @Param("waitCountDelta") int waitCountDelta);
 
     /**
+     * 清空当前叫号
+     *
+     * @param id 队列实例ID
+     * @return 影响行数
+     */
+    @Update("UPDATE queue_instance SET current_ticket_id = NULL, updated_at = NOW() " +
+            "WHERE id = #{id} AND deleted = 0")
+    int clearCurrentTicket(@Param("id") Long id);
+
+    /**
      * 查询门店某日期队列实例
      *
      * @param storeId    门店ID

@@ -26,9 +26,12 @@
       <el-col :span="12">
         <el-card v-if="ticket">
           <template #header>
-            <span>取号结果</span>
+            <div class="header">
+              <span>取号结果</span>
+              <el-tag v-if="isActive" type="success" size="small">自动刷新中</el-tag>
+            </div>
           </template>
-          <el-result icon="success" :title="`您的号码：${ticket.ticketNo}`">
+          <el-result :icon="resultIcon" :title="`您的号码：${ticket.ticketNo}`">
             <template #sub-title>
               <p>前方还有 {{ ticket.aheadCount ?? 0 }} 人</p>
               <p>预计等待 {{ ticket.estimatedWaitMinutes ?? 0 }} 分钟</p>
@@ -36,7 +39,7 @@
             </template>
             <template #extra>
               <el-button @click="refresh">刷新进度</el-button>
-              <el-button type="danger" plain @click="cancel">取消取号</el-button>
+              <el-button v-if="isActive" type="danger" plain @click="cancel">取消取号</el-button>
             </template>
           </el-result>
         </el-card>
@@ -47,19 +50,40 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, onUnmounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { clientApi, ticketApi } from '../../api';
 
 const loading = ref(false);
 const ticket = ref(null);
 const clientToken = ref('');
+let timer = null;
 
 const form = reactive({
   phone: '13800000000',
   storeId: 1,
   templateId: 1
 });
+
+const isActive = computed(() => ticket.value
+  && ['WAITING', 'CALLED'].includes(ticket.value.status));
+
+const resultIcon = computed(() => {
+  if (!ticket.value) return 'info';
+  return ticket.value.status === 'CALLED' ? 'warning' : 'success';
+});
+
+const stopPolling = () => {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+};
+
+const startPolling = () => {
+  stopPolling();
+  timer = setInterval(refresh, 5000);
+};
 
 const takeTicket = async () => {
   if (!form.phone) {
@@ -78,6 +102,7 @@ const takeTicket = async () => {
       idempotencyKey
     }, clientToken.value);
     ElMessage.success('取号成功');
+    startPolling();
   } finally {
     loading.value = false;
   }
@@ -85,7 +110,21 @@ const takeTicket = async () => {
 
 const refresh = async () => {
   if (!ticket.value) return;
-  ticket.value = await ticketApi.get(ticket.value.id);
+  try {
+    const latest = await ticketApi.get(ticket.value.id);
+    if (latest.status === 'CALLED' && ticket.value.status !== 'CALLED') {
+      ElMessage.warning('已叫号，请尽快到店');
+    }
+    if (latest.status === 'MISSED') {
+      ElMessage.error('已过号');
+    }
+    ticket.value = latest;
+    if (!['WAITING', 'CALLED'].includes(latest.status)) {
+      stopPolling();
+    }
+  } catch (e) {
+    // 轮询失败不打断页面
+  }
 };
 
 const cancel = async () => {
@@ -93,5 +132,16 @@ const cancel = async () => {
   await ticketApi.cancel({ ticketId: ticket.value.id });
   ElMessage.warning('已取消取号');
   ticket.value = null;
+  stopPolling();
 };
+
+onUnmounted(stopPolling);
 </script>
+
+<style scoped>
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+</style>

@@ -32,11 +32,12 @@
           <p>前方还有 <strong>{{ ticket.aheadCount ?? 0 }}</strong> 人</p>
           <p>预计等待 <strong>{{ ticket.estimatedWaitMinutes ?? 0 }}</strong> 分钟</p>
           <p class="status">{{ ticket.statusDesc }}</p>
+          <el-tag v-if="isActive" type="success" size="small">自动刷新中</el-tag>
         </div>
 
         <div class="actions">
           <el-button @click="refresh">刷新进度</el-button>
-          <el-button type="danger" plain @click="cancel">取消取号</el-button>
+          <el-button v-if="isActive" type="danger" plain @click="cancel">取消取号</el-button>
         </div>
       </template>
 
@@ -46,19 +47,35 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue';
+import { computed, onUnmounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 import { clientApi, ticketApi } from '../../api';
 
 const loading = ref(false);
 const ticket = ref(null);
 const clientToken = ref('');
+let timer = null;
 
 const form = reactive({
   phone: '13800000000',
   storeId: 1,
   templateId: 1
 });
+
+const isActive = computed(() => ticket.value
+  && ['WAITING', 'CALLED'].includes(ticket.value.status));
+
+const stopPolling = () => {
+  if (timer) {
+    clearInterval(timer);
+    timer = null;
+  }
+};
+
+const startPolling = () => {
+  stopPolling();
+  timer = setInterval(refresh, 5000);
+};
 
 const takeTicket = async () => {
   if (!/^1\d{10}$/.test(form.phone)) {
@@ -76,6 +93,7 @@ const takeTicket = async () => {
       idempotencyKey: `${form.phone}-${Date.now()}`
     }, clientToken.value);
     ElMessage.success('取号成功');
+    startPolling();
   } finally {
     loading.value = false;
   }
@@ -83,15 +101,32 @@ const takeTicket = async () => {
 
 const refresh = async () => {
   if (!ticket.value) return;
-  ticket.value = await ticketApi.get(ticket.value.id);
+  try {
+    const latest = await ticketApi.get(ticket.value.id);
+    if (latest.status === 'CALLED' && ticket.value.status !== 'CALLED') {
+      ElMessage.warning('已叫号，请尽快到店');
+    }
+    if (latest.status === 'MISSED') {
+      ElMessage.error('已过号');
+    }
+    ticket.value = latest;
+    if (!['WAITING', 'CALLED'].includes(latest.status)) {
+      stopPolling();
+    }
+  } catch (e) {
+    // 轮询失败不打断页面
+  }
 };
 
 const cancel = async () => {
   if (!ticket.value) return;
   await ticketApi.cancel({ ticketId: ticket.value.id });
   ticket.value = null;
+  stopPolling();
   ElMessage.warning('已取消取号');
 };
+
+onUnmounted(stopPolling);
 </script>
 
 <style scoped>
