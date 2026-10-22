@@ -26,8 +26,16 @@
       </template>
 
       <template v-else>
+        <el-alert
+          v-if="isExisting"
+          type="warning"
+          :closable="false"
+          show-icon
+          title="您已有进行中的号码，取消、过号或完成后方可重新取号"
+          class="notice"
+        />
         <div class="result">
-          <p class="label">您的排队号码</p>
+          <p class="label">{{ isExisting ? '您已有进行中的号码' : '您的排队号码' }}</p>
           <p class="number">{{ ticket.ticketNo }}</p>
           <p>前方还有 <strong>{{ ticket.aheadCount ?? 0 }}</strong> 人</p>
           <p>预计等待 <strong>{{ ticket.estimatedWaitMinutes ?? 0 }}</strong> 分钟</p>
@@ -53,6 +61,7 @@ import { clientApi, ticketApi } from '../../api';
 
 const loading = ref(false);
 const ticket = ref(null);
+const isExisting = ref(false);
 const clientToken = ref('');
 let timer = null;
 
@@ -88,8 +97,8 @@ const takeTicket = async () => {
 
     const activeTicket = await ticketApi.getActive(clientToken.value);
     if (activeTicket) {
+      isExisting.value = true;
       ticket.value = activeTicket;
-      ElMessage.warning('您已有进行中的排队号码');
       startPolling();
       return;
     }
@@ -101,6 +110,7 @@ const takeTicket = async () => {
       userPhone: form.phone,
       idempotencyKey: `${form.phone}-${Date.now()}`
     }, clientToken.value);
+    isExisting.value = false;
     ElMessage.success('取号成功');
     startPolling();
   } finally {
@@ -131,8 +141,9 @@ const cancel = async () => {
   if (!ticket.value) return;
   await ticketApi.cancel({ ticketId: ticket.value.id }, clientToken.value);
   ticket.value = null;
+  isExisting.value = false;
   stopPolling();
-  ElMessage.warning('已取消取号');
+  ElMessage.success('已取消取号');
 };
 
 onUnmounted(stopPolling);
@@ -158,6 +169,10 @@ onUnmounted(stopPolling);
   margin-top: 0;
   color: #0d9488;
   text-align: center;
+}
+
+.notice {
+  margin-bottom: 16px;
 }
 
 .result {

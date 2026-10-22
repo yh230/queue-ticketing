@@ -27,10 +27,18 @@
         <el-card v-if="ticket">
           <template #header>
             <div class="header">
-              <span>取号结果</span>
+              <span>{{ isExisting ? '您已有进行中的号码' : '取号结果' }}</span>
               <el-tag v-if="isActive" type="success" size="small">自动刷新中</el-tag>
             </div>
           </template>
+          <el-alert
+            v-if="isExisting"
+            type="warning"
+            :closable="false"
+            show-icon
+            title="同一手机号同时只能排一个队列，取消、过号或完成后方可重新取号"
+            class="notice"
+          />
           <el-result :icon="resultIcon" :title="`您的号码：${ticket.ticketNo}`">
             <template #sub-title>
               <p>前方还有 {{ ticket.aheadCount ?? 0 }} 人</p>
@@ -56,6 +64,7 @@ import { clientApi, ticketApi } from '../../api';
 
 const loading = ref(false);
 const ticket = ref(null);
+const isExisting = ref(false);
 const clientToken = ref('');
 let timer = null;
 
@@ -96,8 +105,8 @@ const takeTicket = async () => {
 
     const activeTicket = await ticketApi.getActive(clientToken.value);
     if (activeTicket) {
+      isExisting.value = true;
       ticket.value = activeTicket;
-      ElMessage.warning('您已有进行中的排队号码');
       startPolling();
       return;
     }
@@ -110,6 +119,7 @@ const takeTicket = async () => {
       userPhone: form.phone,
       idempotencyKey
     }, clientToken.value);
+    isExisting.value = false;
     ElMessage.success('取号成功');
     startPolling();
   } finally {
@@ -139,8 +149,9 @@ const refresh = async () => {
 const cancel = async () => {
   if (!ticket.value) return;
   await ticketApi.cancel({ ticketId: ticket.value.id }, clientToken.value);
-  ElMessage.warning('已取消取号');
+  ElMessage.success('已取消取号');
   ticket.value = null;
+  isExisting.value = false;
   stopPolling();
 };
 
@@ -152,5 +163,9 @@ onUnmounted(stopPolling);
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+.notice {
+  margin-bottom: 12px;
 }
 </style>
