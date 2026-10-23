@@ -26,9 +26,9 @@ public class AsyncConfig {
     @Bean("eventExecutor")
     public Executor eventExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(4);
-        executor.setMaxPoolSize(16);
-        executor.setQueueCapacity(200);
+        executor.setCorePoolSize(8);
+        executor.setMaxPoolSize(64);
+        executor.setQueueCapacity(10000);
         executor.setThreadNamePrefix("event-");
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.setWaitForTasksToCompleteOnShutdown(true);
