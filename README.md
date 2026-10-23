@@ -82,8 +82,7 @@ queue-ticketing/
 ├── docker-compose.yml               # MySQL + Redis + Kafka
 ├── queue-ticketing-backend/
 │   ├── sql/
-│   │   ├── init.sql                 # 建表 + 演示数据
-│   │   └── upgrade-*.sql            # 增量升级脚本
+│   │   └── init.sql                 # 建表 + 演示数据（只需执行一次）
 │   └── src/main/
 │       ├── java/com/queue/ticketing/
 │       │   ├── common/
@@ -182,11 +181,7 @@ Kafka 不可用时，取号仍然成功，消息会写入 `local_message` 表，
 mysql -uroot -p < queue-ticketing-backend/sql/init.sql
 ```
 
-已有数据库执行增量脚本：
-
-```bash
-mysql -uroot -p queue_ticketing_db < queue-ticketing-backend/sql/upgrade-20261022-queue-redis.sql
-```
+`init.sql` 只执行一次。建表使用 `CREATE TABLE IF NOT EXISTS`，演示数据使用 `INSERT IGNORE`，重复执行不会产生重复数据。
 
 演示数据包含：
 
