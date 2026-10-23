@@ -53,10 +53,25 @@ public class RedisQueueService {
         return stringRedisTemplate.execute(takeTicketScript, keys,
                 uid,
                 String.valueOf(System.currentTimeMillis()),
-                String.valueOf(config.getTtlSeconds()),
                 String.valueOf(config.getMaxSize()),
                 userPhone == null ? "" : userPhone,
                 source == null ? "" : source);
+    }
+
+    /**
+     * 设置排队相关 key 的过期时间
+     *
+     * @param storeId    门店ID
+     * @param templateId 队列模板ID
+     * @param ticketNo   排队号
+     * @param ttlSeconds 过期秒数
+     */
+    public void expireQueueKeys(Long storeId, Long templateId, long ticketNo, long ttlSeconds) {
+        java.time.Duration ttl = java.time.Duration.ofSeconds(ttlSeconds);
+        stringRedisTemplate.expire(usersKey(storeId), ttl);
+        stringRedisTemplate.expire(metaKey(storeId, templateId), ttl);
+        stringRedisTemplate.expire(queueKey(storeId, templateId), ttl);
+        stringRedisTemplate.expire(ticketPrefix(storeId, templateId) + ticketNo, ttl);
     }
 
     /**

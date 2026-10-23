@@ -78,6 +78,7 @@ public class QueueTakeService {
         String ticketNoText = formatTicketNo(config.getPrefix(), ticketNo);
 
         redisQueueService.setActiveTicketNo(uid, storeId, ticketNo);
+        redisQueueService.expireQueueKeys(storeId, templateId, ticketNo, config.getTtlSeconds());
 
         QueueEventMessage message = new QueueEventMessage();
         message.setMessageId(UUID.randomUUID().toString());

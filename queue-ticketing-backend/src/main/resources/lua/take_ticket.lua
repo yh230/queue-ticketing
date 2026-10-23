@@ -6,10 +6,9 @@
 -- KEYS[5] 幂等 key q:{storeId}:idem:{requestId}
 -- ARGV[1] uid
 -- ARGV[2] nowMillis
--- ARGV[3] ttlSeconds
--- ARGV[4] maxSize
--- ARGV[5] userPhone
--- ARGV[6] source
+-- ARGV[3] maxSize
+-- ARGV[4] userPhone
+-- ARGV[5] source
 
 local usersKey = KEYS[1]
 local metaKey = KEYS[2]
@@ -19,10 +18,9 @@ local idemKey = KEYS[5]
 
 local uid = ARGV[1]
 local now = tonumber(ARGV[2])
-local ttl = tonumber(ARGV[3])
-local maxSize = tonumber(ARGV[4])
-local userPhone = ARGV[5]
-local source = ARGV[6]
+local maxSize = tonumber(ARGV[3])
+local userPhone = ARGV[4]
+local source = ARGV[5]
 
 -- 幂等：同一 requestId 重复请求直接返回首次号码
 local cached = redis.call('GET', idemKey)
@@ -66,10 +64,5 @@ redis.call('HSET', ticketKey,
     'source', source)
 
 redis.call('SET', idemKey, seq, 'EX', 300)
-
-redis.call('EXPIRE', usersKey, ttl)
-redis.call('EXPIRE', metaKey, ttl)
-redis.call('EXPIRE', queueKey, ttl)
-redis.call('EXPIRE', ticketKey, ttl)
 
 return {1, seq, waiting, 'OK'}
